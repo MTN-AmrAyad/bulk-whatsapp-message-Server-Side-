@@ -1,0 +1,111 @@
+import express from 'express';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { body, validationResult } from 'express-validator';
+import { AppDataSource } from '../data-source';
+import { User } from '../entities/User';
+import { getConfig } from 'dotenv-handler';
+import { create } from '@wppconnect-team/wppconnect';
+import { clientInstances } from '..';
+
+const router = express.Router();
+const userRepository = AppDataSource.getRepository(User);
+
+router.post('/register', body('email').isEmail(), body('password').isLength({ min: 6 }), async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  if (req.headers['api-key'] !== getConfig('API_KEY')) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const { email, password } = req.body;
+
+  const existingUser = await userRepository.findOne({ where: { email } });
+  if (existingUser) {
+    return res.status(400).json({ error: 'User already exists' });
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const user = userRepository.create({ email, password: hashedPassword });
+  await userRepository.save(user);
+
+  const token = jwt.sign({ id: user.id }, getConfig('JWT_SECRET') as string, { expiresIn: '12h' });
+
+  res.status(201).json({ token });
+});
+
+router.post('/login', body('email').isEmail(), body('password').exists(), async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { email, password } = req.body;
+  const user = await userRepository.findOne({ where: { email } });
+
+  if (!user || !(await bcrypt.compare(password, user.password))) {
+    return res.status(400).json({ error: 'Invalid credentials' });
+  }
+
+  const token = jwt.sign({ id: user.id }, getConfig('JWT_SECRET') as string, { expiresIn: '12h' });
+  let qrCodeImage: string | undefined;
+  if (user.sessionId) {
+    create({
+      session: user.sessionId,
+      disableWelcome: true,
+      // autoClose: 0,
+      puppeteerOptions: {
+        headless: true,
+        args: ['--no-sandbox'],
+      },
+    })
+      .then(client => {
+        clientInstances.set(user.id, client);
+        console.log('WPPConnect client initialized successfully');
+      })
+      .catch(error => {
+        user.sessionId = undefined;
+        userRepository.save(user);
+        console.error('Error initializing WPPConnect client:', error);
+      });
+    res.json({ token });
+  } else {
+    // generate session id
+    const sessionId = Math.random().toString(36).substring(7);
+
+    create({
+      session: sessionId,
+      // autoClose: 0,
+      disableWelcome: true,
+
+      puppeteerOptions: {
+        headless: true,
+        args: ['--no-sandbox'],
+      },
+      catchQR: (base64Qr, asciiQR, attempts, urlCode) => {
+        console.log('New QR detected, you can generate a new QR code');
+        console.log('Attempts: ', attempts);
+        console.log('UrlCode: ', urlCode);
+        console.log('Base64 QR: ', base64Qr);
+        qrCodeImage = base64Qr;
+        res.json({ token, qrCodeImage });
+      },
+    })
+      .then(async client => {
+        clientInstances.set(user.id, client);
+        user.sessionId = sessionId;
+        await userRepository.save(user);
+        console.log('WPPConnect client initialized successfully');
+      })
+      .catch(error => {
+        user.sessionId = undefined;
+        userRepository.save(user);
+        console.error('Error initializing WPPConnect client:', error);
+      });
+  }
+});
+
+export default router;
