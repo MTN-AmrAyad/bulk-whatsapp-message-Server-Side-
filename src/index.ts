@@ -64,13 +64,15 @@ app.post('/send-messages', authMiddleware, upload.single('file'), (req: Authenti
       return res.status(400).json({ error: 'No numbers provided' });
     }
 
-    phoneNumbers.forEach(phone => {
-      console.log(`Scheduling message to ${phone} at ${scheduledDate}, ${message}`);
+    phoneNumbers.forEach((phone, index) => {
       const clientInstance = clientInstances.get(req.user!.id);
       if (!clientInstance) {
         return res.status(500).json({ error: 'WPPConnect client not initialized' });
       }
-      scheduleMessage(clientInstance, phone, message, scheduledDate, messageLogRepository);
+      // add delay to avoid blocking the server by adding time to the scheduled date
+      const delay = index * 1000 + Math.floor(index / 10) * 2000; // 1 second delay for every 10 messages
+      const scheduledDateWithDelay = new Date(scheduledDate.getTime() + delay);
+      scheduleMessage(clientInstance, phone, message, scheduledDateWithDelay, messageLogRepository);
     });
 
     res.status(200).json({ message: 'Messages scheduled successfully' });
