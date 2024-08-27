@@ -2,7 +2,6 @@ import express from 'express';
 import { Whatsapp } from '@wppconnect-team/wppconnect';
 import multer from 'multer';
 import XLSX from 'xlsx';
-import schedule from 'node-schedule';
 import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
@@ -15,10 +14,12 @@ const envPath = path.resolve(__dirname, `../.env.${process.env.NODE_ENV}`);
 loadConfig(envPath, {
   required: ['PORT', 'DB_HOST', 'DB_PORT', 'DB_USER', 'DB_PASSWORD', 'DB_NAME', 'JWT_SECRET'],
 });
+
 import { AuthenticatedRequest, authMiddleware } from './middlewares/auth';
 import authRoutes from './routes/auth';
 import { AppDataSource } from './data-source';
-import { Repository } from 'typeorm';
+import { processPhoneNumber, scheduleMessage } from './utils/messaging';
+
 export const clientInstances: Map<number, Whatsapp> = new Map();
 
 const app = express();
@@ -29,46 +30,6 @@ app.use(express.json());
 const upload = multer({ dest: 'uploads/' });
 
 app.use('/auth', authRoutes);
-
-// Process phone number to the required format
-const processPhoneNumber = (phone: string): string => {
-  return `${phone}@c.us`;
-};
-
-// Schedule message sending
-const scheduleMessage = (
-  client: Whatsapp,
-  phone: string,
-  message: string,
-  date: Date,
-  messageLogRepository: Repository<MessageLog>,
-) => {
-  schedule.scheduleJob(date, () => {
-    client
-      .getStatus(phone)
-      .then(() => {
-        client.sendText(phone, message).then(async () => {
-          console.log(`Message sent to ${phone}`);
-          await messageLogRepository.save({
-            phoneNumber: phone,
-            message,
-            sentAt: new Date(),
-            status: 'sent',
-          });
-        });
-      })
-      .catch(async err => {
-        console.error(`Failed to send message to ${phone}:`, err);
-        await messageLogRepository.save({
-          phoneNumber: phone,
-          message,
-          sentAt: new Date(),
-          status: 'failed',
-          error: err.message,
-        });
-      });
-  });
-};
 
 // Route to handle message sending
 app.post('/send-messages', authMiddleware, upload.single('file'), (req: AuthenticatedRequest, res) => {
@@ -129,21 +90,3 @@ app.listen(PORT, async () => {
     console.error('Error starting server:', error);
   }
 });
-// Initialize WPPConnect client
-// let clientInstance: Whatsapp;
-
-// create({
-//   session: getConfig('SESSION_NAME')!,
-//   autoClose: 0,
-//   puppeteerOptions: {
-//     headless: true,
-//     args: ['--no-sandbox'],
-//   },
-// })
-//   .then(client => {
-//     clientInstance = client;
-//     console.log('WPPConnect client initialized successfully');
-//   })
-//   .catch(error => {
-//     console.error('Error initializing WPPConnect client:', error);
-//   });
