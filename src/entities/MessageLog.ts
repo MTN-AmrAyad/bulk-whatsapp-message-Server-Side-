@@ -8,7 +8,7 @@ export class MessageLog {
   @Column()
   phoneNumber!: string;
 
-  @Column()
+  @Column({ type: 'text' })
   message!: string;
 
   @CreateDateColumn()

@@ -5,6 +5,12 @@ import schedule from 'node-schedule';
 
 // Process phone number to the required format
 export const processPhoneNumber = (phone: string): string => {
+  if (phone) {
+    phone = phone
+      .toString()
+      .trim()
+      .replace(/[^0-9]/g, '');
+  }
   return `${phone}@c.us`;
 };
 

@@ -53,6 +53,7 @@ router.post('/login', body('email').isEmail(), body('password').exists(), async 
   const token = jwt.sign({ id: user.id }, getConfig('JWT_SECRET') as string, { expiresIn: '12h' });
   let qrCodeImage: string | undefined;
   const sessionId = user.sessionId || Math.random().toString(36).substring(7);
+  let sentFlag = false;
   create({
     session: sessionId,
     disableWelcome: true,
@@ -67,14 +68,20 @@ router.post('/login', body('email').isEmail(), body('password').exists(), async 
       console.log('UrlCode: ', urlCode);
       console.log('Base64 QR: ', base64Qr);
       qrCodeImage = base64Qr;
-      res.json({ token, qrCodeImage });
+      if (!sentFlag) {
+        res.json({ token, qrCodeImage });
+        sentFlag = true;
+      }
     },
   })
     .then(client => {
       clientInstances.set(user.id, client);
       user.sessionId = sessionId;
       userRepository.save(user);
-      res.json({ token });
+      if (!sentFlag) {
+        res.json({ token });
+        sentFlag = true;
+      }
       console.log('WPPConnect client initialized successfully');
     })
     .catch(error => {
