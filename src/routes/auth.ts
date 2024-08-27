@@ -52,60 +52,36 @@ router.post('/login', body('email').isEmail(), body('password').exists(), async 
 
   const token = jwt.sign({ id: user.id }, getConfig('JWT_SECRET') as string, { expiresIn: '12h' });
   let qrCodeImage: string | undefined;
-  if (user.sessionId) {
-    create({
-      session: user.sessionId,
-      disableWelcome: true,
-      // autoClose: 0,
-      puppeteerOptions: {
-        headless: true,
-        args: ['--no-sandbox'],
-      },
+  const sessionId = user.sessionId || Math.random().toString(36).substring(7);
+  create({
+    session: sessionId,
+    disableWelcome: true,
+    autoClose: 1000 * 60 * 5,
+    puppeteerOptions: {
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    },
+    catchQR: (base64Qr, asciiQR, attempts, urlCode) => {
+      console.log('New QR detected, you can generate a new QR code');
+      console.log('Attempts: ', attempts);
+      console.log('UrlCode: ', urlCode);
+      console.log('Base64 QR: ', base64Qr);
+      qrCodeImage = base64Qr;
+      res.json({ token, qrCodeImage });
+    },
+  })
+    .then(client => {
+      clientInstances.set(user.id, client);
+      user.sessionId = sessionId;
+      userRepository.save(user);
+      res.json({ token });
+      console.log('WPPConnect client initialized successfully');
     })
-      .then(client => {
-        clientInstances.set(user.id, client);
-        console.log('WPPConnect client initialized successfully');
-      })
-      .catch(error => {
-        user.sessionId = undefined;
-        userRepository.save(user);
-        console.error('Error initializing WPPConnect client:', error);
-      });
-    res.json({ token });
-  } else {
-    // generate session id
-    const sessionId = Math.random().toString(36).substring(7);
-
-    create({
-      session: sessionId,
-      // autoClose: 0,
-      disableWelcome: true,
-
-      puppeteerOptions: {
-        headless: true,
-        args: ['--no-sandbox'],
-      },
-      catchQR: (base64Qr, asciiQR, attempts, urlCode) => {
-        console.log('New QR detected, you can generate a new QR code');
-        console.log('Attempts: ', attempts);
-        console.log('UrlCode: ', urlCode);
-        console.log('Base64 QR: ', base64Qr);
-        qrCodeImage = base64Qr;
-        res.json({ token, qrCodeImage });
-      },
-    })
-      .then(async client => {
-        clientInstances.set(user.id, client);
-        user.sessionId = sessionId;
-        await userRepository.save(user);
-        console.log('WPPConnect client initialized successfully');
-      })
-      .catch(error => {
-        user.sessionId = undefined;
-        userRepository.save(user);
-        console.error('Error initializing WPPConnect client:', error);
-      });
-  }
+    .catch(error => {
+      user.sessionId = undefined;
+      userRepository.save(user);
+      console.error('Error initializing WPPConnect client:', error);
+    });
 });
 
 export default router;
