@@ -1,5 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
-
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import { MessageLog } from './MessageLog';
 @Entity()
 export class User {
   @PrimaryGeneratedColumn()
@@ -14,6 +14,6 @@ export class User {
   @Column({ nullable: true })
   sessionId?: string;
 
-  @Column({ nullable: true })
-  sessionData?: string; // Store session data like authentication tokens here
+  @OneToMany(() => MessageLog, messageLog => messageLog.user)
+  messageLogs!: MessageLog[];
 }

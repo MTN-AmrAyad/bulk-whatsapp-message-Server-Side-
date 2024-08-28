@@ -21,29 +21,32 @@ export const scheduleMessage = (
   message: string,
   date: Date,
   messageLogRepository: Repository<MessageLog>,
+  user_id: number,
 ) => {
   schedule.scheduleJob(date, () => {
     client
       .getStatus(phone)
       .then(() => {
         client.sendText(phone, message).then(async () => {
-          console.log(`Message sent to ${phone}`);
+          // console.log(`Message sent to ${phone}`);
           await messageLogRepository.save({
             phoneNumber: phone,
             message,
             sentAt: new Date(),
             status: 'sent',
+            user_id,
           });
         });
       })
       .catch(async err => {
-        console.error(`Failed to send message to ${phone}:`, err);
+        // console.error(`Failed to send message to ${phone}:`, err);
         await messageLogRepository.save({
           phoneNumber: phone,
           message,
           sentAt: new Date(),
           status: 'failed',
           error: err.message,
+          user_id,
         });
       });
   });

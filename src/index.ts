@@ -43,6 +43,7 @@ app.post('/send-messages', authMiddleware, upload.single('file'), (req: Authenti
       message: string;
       date: string;
     } = req.body;
+    const user_id = req.user!.id;
     const scheduledDate = new Date(date);
     const messageLogRepository = AppDataSource.getRepository(MessageLog);
 
@@ -72,12 +73,31 @@ app.post('/send-messages', authMiddleware, upload.single('file'), (req: Authenti
       // add delay to avoid blocking the server by adding time to the scheduled date
       const delay = index * 1000 + Math.floor(index / 10) * 2000; // 1 second delay for every 10 messages
       const scheduledDateWithDelay = new Date(scheduledDate.getTime() + delay);
-      scheduleMessage(clientInstance, phone, message, scheduledDateWithDelay, messageLogRepository);
+      scheduleMessage(clientInstance, phone, message, scheduledDateWithDelay, messageLogRepository, user_id);
     });
-
+    console.log(`Scheduled ${phoneNumbers.length} messages, starting at ${scheduledDate}`);
     res.status(200).json({ message: 'Messages scheduled successfully' });
   } catch (error) {
     console.error('Error in /send-messages:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/logs', authMiddleware, async (req: AuthenticatedRequest, res) => {
+  try {
+    const messageLogRepository = AppDataSource.getRepository(MessageLog);
+    const skip = req.query.skip ? parseInt(req.query.skip as string) : 0;
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+    const logs = await messageLogRepository.find({
+      where: { user_id: req.user?.id },
+      order: { sentAt: 'DESC' },
+      skip,
+      take: limit,
+    });
+    const total = await messageLogRepository.count({ where: { user_id: req.user?.id } });
+    res.status(200).json({ logs, total });
+  } catch (error) {
+    console.error('Error in /logs:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
