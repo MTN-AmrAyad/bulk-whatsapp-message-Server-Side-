@@ -50,7 +50,7 @@ app.post('/send-messages', authMiddleware, upload.single('file'), (req: Authenti
     let phoneNumbers: string[] = [];
 
     if (numbers && Array.isArray(numbers)) {
-      phoneNumbers = numbers;
+      phoneNumbers = numbers.map(phone => processPhoneNumber(phone));
     } else if (req.file) {
       const filePath = path.resolve(req.file.path);
       const workbook = XLSX.readFile(filePath);
