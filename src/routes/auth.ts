@@ -64,7 +64,7 @@ router.post('/login', body('email').isEmail(), body('password').exists(), async 
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
     protocolTimeout: 60000,
   };
-  getConfig('NODE_ENV') === 'production' && (puppeteerOptions.executablePath = '/usr/bin/google-chrome');
+  getConfig('NODE_ENV') === 'production' && (puppeteerOptions.executablePath = '/usr/bin/chromium-browser');
   create({
     session: sessionId,
     disableWelcome: true,
