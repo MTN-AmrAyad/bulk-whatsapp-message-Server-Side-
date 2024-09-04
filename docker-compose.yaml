@@ -1,0 +1,32 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '30530:30530'
+    env_file:
+      - .env.production
+    networks:
+      - my_network
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  mysql:
+    image: mysql:latest
+    env_file:
+      - .env.production
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+    networks:
+      - my_network
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
+      interval: 10s
+      retries: 5
+
+networks:
+  my_network:
+    driver: bridge
