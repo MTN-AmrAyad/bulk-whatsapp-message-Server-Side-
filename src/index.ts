@@ -19,6 +19,7 @@ import { AuthenticatedRequest, authMiddleware } from './middlewares/auth';
 import authRoutes from './routes/auth';
 import { AppDataSource } from './data-source';
 import { processPhoneNumber, scheduleMessage } from './utils/messaging';
+import { MoreThan, MoreThanOrEqual } from 'typeorm';
 
 export const clientInstances: Map<number, Whatsapp> = new Map();
 
@@ -88,13 +89,16 @@ app.get('/logs', authMiddleware, async (req: AuthenticatedRequest, res) => {
     const messageLogRepository = AppDataSource.getRepository(MessageLog);
     const skip = req.query.skip ? parseInt(req.query.skip as string) : 0;
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+    const minDate = req.query.minDate ? new Date(new Date(req.query.minDate as string)) : undefined;
     const logs = await messageLogRepository.find({
-      where: { user_id: req.user?.id },
+      where: { user_id: req.user?.id, sentAt: minDate ? MoreThanOrEqual(minDate) : MoreThan(new Date(0)) },
       order: { sentAt: 'DESC' },
       skip,
       take: limit,
     });
-    const total = await messageLogRepository.count({ where: { user_id: req.user?.id } });
+    const total = await messageLogRepository.count({
+      where: { user_id: req.user?.id, sentAt: minDate ? MoreThanOrEqual(minDate) : MoreThan(new Date(0)) },
+    });
     res.status(200).json({ logs, total });
   } catch (error) {
     console.error('Error in /logs:', error);
