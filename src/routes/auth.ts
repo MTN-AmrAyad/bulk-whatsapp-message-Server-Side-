@@ -61,7 +61,13 @@ router.post('/login', body('email').isEmail(), body('password').exists(), async 
     executablePath?: string;
   } = {
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--remote-debugging-port=9222',
+    ],
     protocolTimeout: 120000,
   };
   // console.log('Using puppeteer options:', puppeteerOptions);
