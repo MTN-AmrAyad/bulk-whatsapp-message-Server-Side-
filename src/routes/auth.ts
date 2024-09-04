@@ -54,14 +54,22 @@ router.post('/login', body('email').isEmail(), body('password').exists(), async 
   let qrCodeImage: string | undefined;
   const sessionId = user.sessionId || Math.random().toString(36).substring(7);
   let sentFlag = false;
+  const puppeteerOptions: {
+    headless: boolean;
+    args: string[];
+    protocolTimeout: number;
+    executablePath?: string;
+  } = {
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    protocolTimeout: 60000,
+  };
+  getConfig('NODE_ENV') === 'production' && (puppeteerOptions.executablePath = '/usr/bin/google-chrome');
   create({
     session: sessionId,
     disableWelcome: true,
     autoClose: 1000 * 60 * 5,
-    puppeteerOptions: {
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    },
+    puppeteerOptions: puppeteerOptions,
     catchQR: (base64Qr, asciiQR, attempts, urlCode) => {
       console.log('New QR detected, you can generate a new QR code');
       console.log('Attempts: ', attempts);
