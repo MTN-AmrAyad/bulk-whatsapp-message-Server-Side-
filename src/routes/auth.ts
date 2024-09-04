@@ -65,6 +65,7 @@ router.post('/login', body('email').isEmail(), body('password').exists(), async 
     protocolTimeout: 60000,
   };
   getConfig('NODE_ENV') === 'production' && (puppeteerOptions.executablePath = '/usr/bin/chromium-browser');
+  console.log('Using puppeteer options:', puppeteerOptions);
   create({
     session: sessionId,
     disableWelcome: true,
