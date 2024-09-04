@@ -62,7 +62,7 @@ router.post('/login', body('email').isEmail(), body('password').exists(), async 
   } = {
     headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    protocolTimeout: 60000,
+    protocolTimeout: 120000,
   };
   getConfig('NODE_ENV') === 'production' && (puppeteerOptions.executablePath = '/usr/bin/chromium-browser');
   console.log('Using puppeteer options:', puppeteerOptions);
