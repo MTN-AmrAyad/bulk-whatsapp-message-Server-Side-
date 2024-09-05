@@ -67,10 +67,8 @@ router.post('/login', body('email').isEmail(), body('password').exists(), async 
       '--disable-dev-shm-usage',
       '--disable-gpu',
       '--remote-debugging-port=9222',
-      '--disable-extensions',
-      '--single-process', // You could try this
     ],
-    protocolTimeout: 180000, // Increase timeout if needed
+    protocolTimeout: 120000,
   };
   // console.log('Using puppeteer options:', puppeteerOptions);
   create({
