@@ -65,8 +65,10 @@ router.post('/login', body('email').isEmail(), body('password').exists(), async 
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
       '--disable-gpu',
       '--remote-debugging-port=9222',
+      '--disable-features=IsolateOrigins,site-per-process',
     ],
     protocolTimeout: 120000,
   };
