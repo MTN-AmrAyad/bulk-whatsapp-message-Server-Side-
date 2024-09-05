@@ -76,6 +76,7 @@ router.post('/login', body('email').isEmail(), body('password').exists(), async 
   create({
     session: sessionId,
     disableWelcome: true,
+    useChrome: true,
     autoClose: 1000 * 60 * 5,
     puppeteerOptions: puppeteerOptions,
     catchQR: (base64Qr, asciiQR, attempts, urlCode) => {
