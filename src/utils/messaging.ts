@@ -24,7 +24,7 @@ export const scheduleFileMessage = (
   user_id: number,
 ) => {
   schedule.scheduleJob(date, () => {
-    const filePath = path.join(__dirname, '../../قرار ادارى .pdf');
+    const filePath = path.join(__dirname, '../../output.mp4');
     client
       .getStatus(phone)
       .then(() => {

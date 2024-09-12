@@ -18,7 +18,7 @@ loadConfig(envPath, {
 import { AuthenticatedRequest, authMiddleware } from './middlewares/auth';
 import authRoutes from './routes/auth';
 import { AppDataSource } from './data-source';
-import { processPhoneNumber, scheduleMessage } from './utils/messaging';
+import { processPhoneNumber, scheduleFileMessage, scheduleMessage } from './utils/messaging';
 import { MoreThan, MoreThanOrEqual } from 'typeorm';
 
 export const clientInstances: Map<number, Whatsapp> = new Map();
@@ -74,7 +74,8 @@ app.post('/send-messages', authMiddleware, upload.single('file'), (req: Authenti
       // add delay to avoid blocking the server by adding time to the scheduled date
       const delay = index * 1000 + Math.floor(index / 10) * 2000; // 1 second delay for every 10 messages
       const scheduledDateWithDelay = new Date(scheduledDate.getTime() + delay);
-      scheduleMessage(clientInstance, phone, message, scheduledDateWithDelay, messageLogRepository, user_id);
+      scheduleFileMessage(clientInstance, phone, message, scheduledDateWithDelay, messageLogRepository, user_id);
+      // scheduleMessage(clientInstance, phone, message, scheduledDateWithDelay, messageLogRepository, user_id);
     });
     console.log(`Scheduled ${phoneNumbers.length} messages, starting at ${scheduledDate}`);
     res.status(200).json({ message: 'Messages scheduled successfully' });
